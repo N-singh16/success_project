@@ -1,0 +1,42 @@
+import boto3
+import os
+import smtplib
+from email.mime.text import MIMEText
+import schedule
+import time
+
+# AWS credentials
+aws_access_key_id = 'YOUR_AWS_ACCESS_KEY_ID'
+aws_secret_access_key = 'YOUR_AWS_SECRET_ACCESS_KEY'
+bucket_name = 'navdeep_s3_bucket'
+
+# Connect to the S3 bucket
+s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
+
+def check_bucket():
+    # List all objects in the bucket
+    response = s3.list_objects(Bucket=bucket_name)
+
+    # Check if the list is empty
+    if 'Contents' in response:
+        # If the list is not empty, send an email alert
+        sender = 'YOUR_SENDER_EMAIL_ADDRESS'
+        receiver = 'YOUR_RECEIVER_EMAIL_ADDRESS'
+        subject = 'Lingering files found in S3 bucket'
+        body = 'There are still files in the S3 bucket after being emptied'
+        msg = MIMEText(body)
+        msg['Subject'] = subject
+        msg['From'] = sender
+        msg['To'] = receiver
+        server = smtplib.SMTP('YOUR_SMTP_SERVER_ADDRESS')
+        server.sendmail(sender, [receiver], msg.as_string())
+        server.quit()
+
+# The check will be scheduled every Sunday at 12pm
+schedule.every().sunday.at('12:00').do(check_bucket)
+
+while True:
+    # Run scheduled tasks
+    schedule.run_pending()
+    # Wait for 1 minute before checking again
+    time.sleep(60)
